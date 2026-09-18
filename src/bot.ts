@@ -1,20 +1,120 @@
-import { Bot } from "@maxhub/max-bot-api";
+import { Bot, Keyboard, type Context } from "@maxhub/max-bot-api";
 import { config } from "dotenv";
+import { setTimeout as delay } from "node:timers/promises";
+import { DRIVER_ROLE, handleDriverRole } from "./roles/driver.js";
+import { ADMIN_ROLE, handleAdminRole } from "./roles/admin.js";
+import { LOGIST_ROLE, handleLogistRole } from "./roles/logist.js";
 
-config(); // Загрузка переменных из .env файла
+config();
 
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"; // Отключение проверки сертификата
+const token = process.env.MAX_BOT_TOKEN;
+const apiUrl = process.env.MAX_API_URL ?? "https://platform-api2.max.ru";
 
-const bot = new Bot(process.env.BOT_TOKEN!); // Создание экземпляра бота
+if (!token) {
+    throw new Error("MAX_BOT_TOKEN is not set. Add the bot token to .env before starting the bot.");
+}
 
-bot.command("start", async (ctx) => {
-    await ctx.reply("Добро пожаловать!");
+const bot = new Bot(token, {
+    clientOptions: { baseUrl: apiUrl },
 });
 
-bot.hears("ping", async (ctx) => {
-    await ctx.reply("pong", {
-        link: { type: "reply", mid: ctx.message.body.mid }
+const commands = [
+    { name: "start", description: "Начать работу с ботом" },
+    { name: "id", description: "Получить свой user_id" },
+    { name: "help", description: "Показать доступные команды" },
+    { name: "clear", description: "Удалить сообщения бота в этом чате" },
+];
+
+const roleKeyboard = Keyboard.inlineKeyboard([
+    [Keyboard.button.callback("Администратор", ADMIN_ROLE)],
+    [Keyboard.button.callback("Логист", LOGIST_ROLE)],
+    [Keyboard.button.callback("Водитель", DRIVER_ROLE)],
+]);
+
+const sendWelcomeMessage = async (ctx: Context): Promise<void> => {
+    await ctx.reply("Добро пожаловать! Выберите вашу роль:", {
+        attachments: [roleKeyboard],
     });
-});
+};
 
-bot.start();
+const acknowledgeCallback = async (ctx: Context): Promise<void> => {
+    await ctx.answerOnCallback({ message: { text: "Готово" } });
+};
+
+const sendHelpMessage = async (ctx: Context): Promise<void> => {
+    await ctx.reply([
+        "Доступные команды:",
+        "/start — начать работу",
+        "/id — получить свой user_id",
+        "/help — показать это меню",
+        "/clear — удалить сообщения бота в этом чате",
+    ].join("\n"));
+};
+
+const sendUserId = async (ctx: Context): Promise<void> => {
+    const userId = ctx.message?.sender?.user_id;
+
+    await ctx.reply(
+        userId === undefined
+            ? "Не удалось определить ID пользователя."
+            : `Ваш user_id: ${userId}`,
+    );
+};
+
+const clearBotMessages = async (ctx: Context): Promise<void> => {
+    const botId = ctx.myId;
+
+    if (botId === undefined) {
+        await ctx.reply("Не удалось определить ID бота.");
+        return;
+    }
+
+    const { messages } = await ctx.getMessages({ count: 100 });
+    const botMessages = messages.filter(
+        (message) => message.sender?.user_id === botId,
+    );
+
+    for (const message of botMessages) {
+        await ctx.api.deleteMessage(message.body.mid);
+        await delay(500);
+    }
+
+    await ctx.reply(
+        `Удалено сообщений бота: ${botMessages.length}.\n`
+        + "Сообщения пользователя MAX не позволяет удалять ботам в личном диалоге.",
+    );
+};
+
+// Системный запуск и команда /start.
+bot.on("bot_started", sendWelcomeMessage);
+bot.command("start", sendWelcomeMessage);
+
+const registerRoleAction = (
+    payload: string,
+    handler: (ctx: Context) => Promise<void>,
+): void => {
+    bot.action(payload, async (ctx) => {
+        await acknowledgeCallback(ctx);
+        await handler(ctx);
+    });
+};
+
+// Кнопки ролей передают управление в свои модули.
+registerRoleAction(ADMIN_ROLE, handleAdminRole);
+registerRoleAction(LOGIST_ROLE, handleLogistRole);
+registerRoleAction(DRIVER_ROLE, handleDriverRole);
+
+// Текстовые команды.
+bot.command("id", sendUserId);
+bot.command("help", sendHelpMessage);
+bot.command("clear", clearBotMessages);
+
+const startBot = async (): Promise<void> => {
+    await bot.api.setMyCommands(commands);
+    await bot.start();
+};
+
+startBot().catch((error: unknown) => {
+    console.error("Failed to start MAX bot:", error);
+    process.exitCode = 1;
+});
