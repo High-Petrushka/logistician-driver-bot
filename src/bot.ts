@@ -8,6 +8,7 @@ import { LOGIST_ROLE, handleLogistRole } from "./roles/logist.js";
 config();
 
 const token = process.env.MAX_BOT_TOKEN;
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"; // Переменная для дебага
 const apiUrl = process.env.MAX_API_URL ?? "https://platform-api2.max.ru";
 
 if (!token) {

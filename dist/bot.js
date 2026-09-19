@@ -6,6 +6,7 @@ import { ADMIN_ROLE, handleAdminRole } from "./roles/admin.js";
 import { LOGIST_ROLE, handleLogistRole } from "./roles/logist.js";
 config();
 const token = process.env.MAX_BOT_TOKEN;
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 const apiUrl = process.env.MAX_API_URL ?? "https://platform-api2.max.ru";
 if (!token) {
     throw new Error("MAX_BOT_TOKEN is not set. Add the bot token to .env before starting the bot.");
