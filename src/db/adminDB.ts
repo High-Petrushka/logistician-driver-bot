@@ -2,7 +2,7 @@ import { SqlError } from "mariadb";
 
 import { connectToDataBase } from "./commonDB.js";
 
-import { type UserData } from "./types/dbTypes.js";
+import { type UserData, type UserRequestData } from "./types/dbTypes.js";
 
 export async function getUsers(): Promise<UserData[] | undefined> {
     // Открываем соединение
@@ -50,5 +50,37 @@ export async function getDrivers(): Promise<UserData[] | undefined> {
     } finally {
         // Закрываем соединение
         await conn.end();
+    }
+}
+
+export async function getUserRequests(): Promise<UserRequestData[] | undefined> {
+    // Открываем соединение
+    const conn = await connectToDataBase();
+
+    try {
+        // Запрашиваем перечень всех пользовательских заявок
+        return await conn.query("SELECT * FROM user_requests");
+    } catch (e) {
+        console.log(e);
+        throw SqlError("Unable to perform the query!");
+    } finally {
+        // Закрываем соединение
+        await conn.end();
+    }
+}
+
+export async function setUser(userData: UserData): Promise<void> {
+    // Открываем соединение
+    const conn = await connectToDataBase();
+
+    try {
+        // Создаём новую запись в таблице users
+        await conn.query(`INSERT INTO users(max_id, name, role) VALUES (${userData.max_id}, '${userData.name}', '${userData.role}')`);
+    } catch (e) {
+        console.log(e);
+        throw SqlError("Unable to perform the query!");
+    } finally {
+        // Закрываем соединение
+        conn.end();
     }
 }

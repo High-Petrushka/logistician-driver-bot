@@ -4,8 +4,9 @@ import { setTimeout as delay } from "node:timers/promises";
 import { DRIVER_ROLE, handleDriverRole } from "./roles/driver.js";
 import { ADMIN_ROLE, handleAdminRole } from "./roles/admin.js";
 import { LOGIST_ROLE, handleLogistRole } from "./roles/logist.js";
-import { getDrivers, getLogisticians, getUsers } from "./db/adminDB.js";
-import { makeUserList } from "./supportFunctions/formatFunctions.js";
+import { getDrivers, getLogisticians, getUserRequests, getUsers, setUser } from "./db/adminDB.js";
+import { makeUserList, makeUserRequestList } from "./supportFunctions/formatFunctions.js";
+import { Role } from "./db/types/dbTypes.js";
 config();
 const token = process.env.MAX_BOT_TOKEN;
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"; // Переменная для дебага
@@ -128,6 +129,31 @@ bot.command("drivers", async (ctx) => {
         }
     }
     catch (e) {
+        await ctx.reply("Что-то пошло не так! Попробуйте позже");
+    }
+});
+bot.command("set", async (ctx) => {
+    try {
+        await setUser({ max_id: 444444444, name: "BMO", role: Role.driver });
+        await ctx.reply("Пользователь добавлен!");
+    }
+    catch (e) {
+        await ctx.reply("Что-то пошло не так! Попробуйте позже");
+    }
+});
+bot.command("requests", async (ctx) => {
+    try {
+        const requestList = await getUserRequests();
+        if (requestList?.length === 0) {
+            await ctx.reply("Пользователи ещё не были добавлены!");
+        }
+        else {
+            const userString = makeUserRequestList(requestList);
+            await ctx.reply(userString);
+        }
+    }
+    catch (e) {
+        console.log(e);
         await ctx.reply("Что-то пошло не так! Попробуйте позже");
     }
 });

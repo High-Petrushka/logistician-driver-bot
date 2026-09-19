@@ -4,13 +4,11 @@ import { setTimeout as delay } from "node:timers/promises";
 import { DRIVER_ROLE, handleDriverRole } from "./roles/driver.js";
 import { ADMIN_ROLE, handleAdminRole } from "./roles/admin.js";
 import { LOGIST_ROLE, handleLogistRole } from "./roles/logist.js";
-import { getDrivers, getLogisticians, getUsers } from "./db/adminDB.js";
-import { makeUserList } from "./supportFunctions/formatFunctions.js";
 
 config();
 
 const token = process.env.MAX_BOT_TOKEN;
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"; // Переменная для дебага
+// process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"; // Переменная для дебага
 const apiUrl = process.env.MAX_API_URL ?? "https://platform-api2.max.ru";
 
 if (!token) {
@@ -116,48 +114,6 @@ const startBot = async (): Promise<void> => {
     await bot.api.setMyCommands(commands);
     await bot.start();
 };
-
-bot.command("users", async (ctx) => {
-    try {
-        const userList = await getUsers();
-        if (!userList) {
-            await ctx.reply("Пользователи ещё не были добавлены!");
-        } else {
-            const userString = makeUserList(userList);
-            await ctx.reply(userString);
-        }
-    } catch (e) {
-        await ctx.reply("Что-то пошло не так! Попробуйте позже");
-    }
-});
-
-bot.command("logisticians", async (ctx) => {
-    try {
-        const userList = await getLogisticians();
-        if (!userList) {
-            await ctx.reply("Пользователи ещё не были добавлены!");
-        } else {
-            const userString = makeUserList(userList);
-            await ctx.reply(userString);
-        }
-    } catch (e) {
-        await ctx.reply("Что-то пошло не так! Попробуйте позже");
-    }
-});
-
-bot.command("drivers", async (ctx) => {
-    try {
-        const userList = await getDrivers();
-        if (!userList) {
-            await ctx.reply("Пользователи ещё не были добавлены!");
-        } else {
-            const userString = makeUserList(userList);
-            await ctx.reply(userString);
-        }
-    } catch (e) {
-        await ctx.reply("Что-то пошло не так! Попробуйте позже");
-    }
-});
 
 startBot().catch((error: unknown) => {
     console.error("Failed to start MAX bot:", error);

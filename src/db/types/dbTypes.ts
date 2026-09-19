@@ -9,3 +9,9 @@ export interface UserData {
     name: String,
     role: Role,
 }
+
+export interface UserRequestData {
+    id: Number,
+    max_id: Number,
+    name: String,
+}
